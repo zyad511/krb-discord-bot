@@ -35,18 +35,21 @@ async function fetchScripts(query) {
 }
 
 function embedFor(script, index, total) {
-  const e = new EmbedBuilder()
+  const desc = (script.description_ar || script.description || "لا يوجد وصف").slice(0, 300) + "...";
+
+  const embed = new EmbedBuilder()
     .setColor("#22c55e")
     .setTitle(script.title_ar || script.title || "بدون عنوان")
-    .setDescription(script.description_ar || "لا يوجد وصف")
-    .setFooter({
-      text: `📄 ${index + 1} / ${total}   👁️ ${script.views || 0}   ${
-        script.key ? "🔑 بمفتاح" : "✅ بدون مفتاح"
-      }`
-    });
+    .setDescription(desc)
+    .addFields(
+      { name: "👁️ مشاهدات", value: `${script.views || 0}`, inline: true },
+      { name: "🔑 مفتاح", value: script.key ? "نعم" : "لا", inline: true },
+      { name: "🎮 اللعبة", value: `[انتقل للعبة](${script.game?.gameLink || "#"})`, inline: false }
+    )
+    .setFooter({ text: `${index + 1} / ${total}` });
 
-  if (script.image) e.setImage(script.image);
-  return e;
+  if (script.image) embed.setImage(script.image);
+  return embed;
 }
 
 function buttons(index, total) {
@@ -86,6 +89,9 @@ client.on(Events.MessageCreate, async msg => {
 
     const scripts = await fetchScripts(q);
     if (!scripts.length) return msg.reply("❌ لا توجد نتائج");
+
+    // أكثر المشاهدات أولًا
+    scripts.sort((a, b) => (b.views || 0) - (a.views || 0));
 
     const index = 0;
     const sent = await msg.channel.send({
